@@ -1,23 +1,10 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
-const Reader = std.io.Reader;
 const allocator = std.heap.page_allocator;
 
 pub fn main() !void {
-    var args = std.process.args();
-
-    _ = args.skip();
-
-    const filename = args.next();
-    var reader: Reader = null;
-    if (filename == null) {
-        const stdin = std.io.getStdIn();
-        reader = stdin.reader();
-    } else {
-        var file = try std.fs.cwd().openFile(filename, .{});
-        defer file.close();
-        reader = file.reader();
-    }
+    const stdin = std.io.getStdIn();
+    var reader = stdin.reader();
 
     var input: ArrayList(u8) = ArrayList(u8).init(allocator);
     try reader.readAllArrayList(&input, 9999999);
