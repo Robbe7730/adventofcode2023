@@ -1,2 +1,1 @@
-cd "./day$1"
 zig build
