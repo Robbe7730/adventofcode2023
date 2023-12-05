@@ -1,0 +1,9 @@
+range = [A, B[
+src = [C, D[
+
+ABCD -> skip
+ACBD -> AC x,    CB map, BD skip
+ACDB -> AC x,    CD map, DB x
+CADB -> CA skip, AD map, DB x
+CABD -> CA skip, AB map, BD skip
+CDAB -> skip
