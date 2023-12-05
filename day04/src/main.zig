@@ -10,7 +10,7 @@ pub fn main() !void {
     try reader.readAllArrayList(&input, 9999999);
 
     std.debug.print("part 1: {any}\n", .{part1(input)});
-    std.debug.print("part 2: {}\n", .{part2(input)});
+    std.debug.print("part 2: {any}\n", .{part2(input)});
 }
 
 fn read_num(i: *usize, input: ArrayList(u8)) usize {
@@ -90,8 +90,85 @@ fn part1(input: ArrayList(u8)) !usize {
     return ret;
 }
 
-fn part2(input: ArrayList(u8)) usize {
-    _ = input;
+fn part2(input: ArrayList(u8)) !usize {
     var ret: usize = 0;
+    var i: usize = 0;
+
+    // Count number of cards
+    var num_cards: usize = 0;
+    for (input.items) |x| {
+        if (x == '\n') {
+            num_cards += 1;
+        }
+    }
+
+    var multipliers: ArrayList(usize) = ArrayList(usize).init(allocator);
+
+    try multipliers.appendNTimes(1, num_cards);
+
+    defer multipliers.deinit();
+
+    while (i < input.items.len) {
+        // Skip "Card"
+        i += 5;
+        skip_spaces(&i, input);
+
+        const card_id = read_num(&i, input);
+
+        // Skip ":"
+        i += 1;
+
+        skip_spaces(&i, input);
+
+        // Read winning numbers
+        var winning_numbers: ArrayList(usize) = ArrayList(usize).init(allocator);
+        defer winning_numbers.deinit();
+
+        while (input.items[i] != '|') {
+            try winning_numbers.append(read_num(&i, input));
+            skip_spaces(&i, input);
+            // std.debug.print("Winning #: {}", .{winning_numbers.items.len});
+        }
+
+        // Skip "|"
+        i += 1;
+
+        skip_spaces(&i, input);
+
+        var score: usize = 0;
+        while (input.items[i] != '\n') {
+            const own_value = read_num(&i, input);
+            for (winning_numbers.items) |winner| {
+                if (own_value == winner) {
+                    score += 1;
+                }
+            }
+            skip_spaces(&i, input);
+        }
+        // std.debug.print("Card {}: {}\n", .{card_id, score});
+        for (0..score) |j| {
+            multipliers.items[card_id+j] += multipliers.items[card_id-1];
+        }
+
+        //for (0..num_cards) |j| {
+        //    std.debug.print("{}, ", .{multipliers.items[j]});
+        //}
+        //std.debug.print("\n", .{});
+
+
+        // Skip rest of line
+        while (input.items[i] != '\n') {
+            i += 1;
+        }
+
+        i += 1;
+    }
+
+    for (0..num_cards) |j| {
+        // std.debug.print("{}, ", .{multipliers.items[j]});
+        ret += multipliers.items[j];
+    }
+    // std.debug.print("\n", .{});
+
     return ret;
 }
