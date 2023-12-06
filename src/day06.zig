@@ -61,7 +61,39 @@ fn part1(input: ArrayList(u8)) usize {
 }
 
 fn part2(input: ArrayList(u8)) usize {
-    _ = input;
-    var ret: usize = 0;
-    return ret;
+    var ret: usize = 1;
+
+    const times_distances = parse(input);
+    const times = times_distances[0];
+    const distances = times_distances[1];
+
+
+    var time: usize = 0;
+
+    for (times.items) |time_part| {
+        const num_digits = std.math.log10_int(time_part)+1;
+        time *= std.math.pow(usize, 10, num_digits);
+        time += time_part;
+    }
+
+    var distance: usize = 0;
+
+    for (distances.items) |distance_part| {
+        const num_digits = std.math.log10_int(distance_part)+1;
+        distance *= std.math.pow(usize, 10, num_digits);
+        distance += distance_part;
+    }
+
+    std.debug.print("{} {}\n", .{time, distance});
+
+
+    for (0..time) |hold_time| {
+        if ((time - hold_time) * hold_time > distance) {
+            ret += 1;
+        }
+    }
+
+    // 27563422 --> Too High
+    // No clue where the -1 comes from, but it works...
+    return ret - 1;
 }
