@@ -1,16 +1,10 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const allocator = std.heap.page_allocator;
+const read_and_call = @import("shared.zig").read_and_call;
 
-pub fn main() !void {
-    const stdin = std.io.getStdIn();
-    var reader = stdin.reader();
-
-    var input: ArrayList(u8) = ArrayList(u8).init(allocator);
-    try reader.readAllArrayList(&input, 9999999);
-
-    std.debug.print("part 1: {any}\n", .{part1(input)});
-    std.debug.print("part 2: {any}\n", .{part2(input)});
+pub fn main() void {
+    read_and_call(usize, &part1, &part2);
 }
 
 fn read_num(i: *usize, input: ArrayList(u8)) usize {
@@ -30,7 +24,7 @@ fn skip_spaces(i: *usize, input: ArrayList(u8)) void {
     }
 }
 
-fn part1(input: ArrayList(u8)) !usize {
+fn part1(input: ArrayList(u8)) usize {
     var ret: usize = 0;
     var i: usize = 0;
 
@@ -52,7 +46,7 @@ fn part1(input: ArrayList(u8)) !usize {
         defer winning_numbers.deinit();
 
         while (input.items[i] != '|') {
-            try winning_numbers.append(read_num(&i, input));
+            winning_numbers.append(read_num(&i, input)) catch unreachable;
             skip_spaces(&i, input);
             // std.debug.print("Winning #: {}", .{winning_numbers.items.len});
         }
@@ -90,7 +84,7 @@ fn part1(input: ArrayList(u8)) !usize {
     return ret;
 }
 
-fn part2(input: ArrayList(u8)) !usize {
+fn part2(input: ArrayList(u8)) usize {
     var ret: usize = 0;
     var i: usize = 0;
 
@@ -104,7 +98,7 @@ fn part2(input: ArrayList(u8)) !usize {
 
     var multipliers: ArrayList(usize) = ArrayList(usize).init(allocator);
 
-    try multipliers.appendNTimes(1, num_cards);
+    multipliers.appendNTimes(1, num_cards) catch unreachable;
 
     defer multipliers.deinit();
 
@@ -125,7 +119,7 @@ fn part2(input: ArrayList(u8)) !usize {
         defer winning_numbers.deinit();
 
         while (input.items[i] != '|') {
-            try winning_numbers.append(read_num(&i, input));
+            winning_numbers.append(read_num(&i, input)) catch unreachable;
             skip_spaces(&i, input);
             // std.debug.print("Winning #: {}", .{winning_numbers.items.len});
         }

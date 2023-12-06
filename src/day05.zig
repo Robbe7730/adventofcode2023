@@ -1,16 +1,10 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const allocator = std.heap.page_allocator;
+const read_and_call = @import("shared.zig").read_and_call;
 
-pub fn main() !void {
-    const stdin = std.io.getStdIn();
-    var reader = stdin.reader();
-
-    var input: ArrayList(u8) = ArrayList(u8).init(allocator);
-    try reader.readAllArrayList(&input, 9999999);
-
-    std.debug.print("part 1: {any}\n", .{part1(input)});
-    std.debug.print("part 2: {any}\n", .{part2(input)});
+pub fn main() void {
+    read_and_call(usize, &part1, &part2);
 }
 
 fn read_num(i: *usize, input: ArrayList(u8)) usize {
@@ -24,7 +18,7 @@ fn read_num(i: *usize, input: ArrayList(u8)) usize {
     return ret;
 }
 
-fn part1(input: ArrayList(u8)) !usize {
+fn part1(input: ArrayList(u8)) usize {
     var ret: usize = 999999999999;
 
     var i: usize = 0;
@@ -38,7 +32,7 @@ fn part1(input: ArrayList(u8)) !usize {
         // Skip space
         i += 1;
 
-        try seeds.append(read_num(&i, input));
+        seeds.append(read_num(&i, input)) catch unreachable;
     }
 
     // Skip newline
@@ -66,10 +60,10 @@ fn part1(input: ArrayList(u8)) !usize {
             const len = read_num(&i, input);
             i += 1;
 
-            try map.append(.{dest_start, src_start, len});
+            map.append(.{dest_start, src_start, len}) catch unreachable;
 
         }
-        try maps.append(map);
+        maps.append(map) catch unreachable;
         i += 1;
     }
 
@@ -96,7 +90,7 @@ fn part1(input: ArrayList(u8)) !usize {
     return ret;
 }
 
-fn part2(input: ArrayList(u8)) !usize {
+fn part2(input: ArrayList(u8)) usize {
     var i: usize = 0;
     var seeds: ArrayList(usize) = ArrayList(usize).init(allocator);
 
@@ -108,7 +102,7 @@ fn part2(input: ArrayList(u8)) !usize {
         // Skip space
         i += 1;
 
-        try seeds.append(read_num(&i, input));
+        seeds.append(read_num(&i, input)) catch unreachable;
     }
 
     // Skip newline
@@ -136,10 +130,10 @@ fn part2(input: ArrayList(u8)) !usize {
             const len = read_num(&i, input);
             i += 1;
 
-            try map.append(.{dest_start, src_start, len});
+            map.append(.{dest_start, src_start, len}) catch unreachable;
 
         }
-        try maps.append(map);
+        maps.append(map) catch unreachable;
         i += 1;
     }
 
@@ -147,7 +141,7 @@ fn part2(input: ArrayList(u8)) !usize {
 
     var s: usize = 0;
     while (s < seeds.items.len) {
-        try ranges.append(.{seeds.items[s], seeds.items[s+1]});
+        ranges.append(.{seeds.items[s], seeds.items[s+1]}) catch unreachable;
         s += 2;
     }
 
@@ -168,7 +162,7 @@ fn part2(input: ArrayList(u8)) !usize {
                 const range_end = range_start + range_len;
 
                 if (range_start >= src_end or src_start >= range_end) {
-                    try new_ranges.append(.{range_start, range_len});
+                    new_ranges.append(.{range_start, range_len}) catch unreachable;
                     continue;
                 }
 
@@ -176,7 +170,7 @@ fn part2(input: ArrayList(u8)) !usize {
                 if (range_start < src_start) {
                     // AC x
                     // std.log.debug("AC x", .{});
-                    try new_ranges.append(.{range_start, src_start - range_start});
+                    new_ranges.append(.{range_start, src_start - range_start}) catch unreachable;
                 } else {
                     // CA skip
                     // std.log.debug("CA skip", .{});
@@ -188,12 +182,12 @@ fn part2(input: ArrayList(u8)) !usize {
 
                 var intersect_start_mapped = dest_start + (intersect_start - src_start);
 
-                try mapped_ranges.append(.{intersect_start_mapped, intersect_end - intersect_start});
+                mapped_ranges.append(.{intersect_start_mapped, intersect_end - intersect_start}) catch unreachable;
 
                 // Difference right
                 if (range_end > src_end) {
                     // DB x
-                    try new_ranges.append(.{src_end, range_end - src_end});
+                    new_ranges.append(.{src_end, range_end - src_end}) catch unreachable;
                     // std.log.debug("DB x", .{});
                 } else {
                     // BD skip
@@ -209,7 +203,7 @@ fn part2(input: ArrayList(u8)) !usize {
             ranges = new_ranges;
 
         }
-        try ranges.appendSlice(mapped_ranges.items);
+        ranges.appendSlice(mapped_ranges.items) catch unreachable;
         // std.debug.print("{}\n", .{dest});
     }
     // std.debug.print("---> {}\n", .{dest});

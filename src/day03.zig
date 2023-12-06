@@ -1,17 +1,12 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const allocator = std.heap.page_allocator;
+const read_and_call = @import("shared.zig").read_and_call;
 
-pub fn main() !void {
-    const stdin = std.io.getStdIn();
-    var reader = stdin.reader();
-
-    var input: ArrayList(u8) = ArrayList(u8).init(allocator);
-    try reader.readAllArrayList(&input, 9999999);
-
-    std.debug.print("part 1: {}\n", .{part1(input)});
-    std.debug.print("part 2: {}\n", .{part2(input)});
+pub fn main() void {
+    read_and_call(usize, &part1, &part2);
 }
+
 
 fn is_symbol(x: isize, y: isize, len: usize, input: ArrayList(u8)) bool {
     if (x >= 0 and y >= 0 and x < len and y < len) {
