@@ -37,3 +37,20 @@ pub fn read_and_call(
         std.debug.print("part 2: {any}\n", .{part2(input)});
     }
 }
+
+pub fn read_num(i: *usize, input: ArrayList(u8)) usize {
+    var ret: usize = 0;
+
+    while (input.items[i.*] >= '0' and input.items[i.*] <= '9') {
+        ret = ret * 10 + (input.items[i.*] - '0');
+        (i.*) += 1;
+    }
+
+    return ret;
+}
+
+pub fn skip_spaces(i: *usize, input: ArrayList(u8)) void {
+    while (input.items[i.*] == ' ') {
+        (i.*) += 1;
+    }
+}
