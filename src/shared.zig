@@ -49,6 +49,23 @@ pub fn read_num(i: *usize, input: ArrayList(u8)) usize {
     return ret;
 }
 
+pub fn read_num_signed(i: *usize, input: ArrayList(u8)) isize {
+    var ret: isize = 0;
+    var negative = false;
+
+    if (input.items[i.*] == '-') {
+        negative = true;
+        (i.*) += 1;
+    }
+
+    while (input.items[i.*] >= '0' and input.items[i.*] <= '9') {
+        ret = ret * 10 + (input.items[i.*] - '0');
+        (i.*) += 1;
+    }
+
+    return if (negative) -ret else ret;
+}
+
 pub fn skip_spaces(i: *usize, input: ArrayList(u8)) void {
     while (input.items[i.*] == ' ') {
         (i.*) += 1;
