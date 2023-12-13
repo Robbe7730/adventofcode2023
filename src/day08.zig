@@ -52,6 +52,22 @@ fn part1(input: ArrayList(u8)) usize {
     return ret;
 }
 
+fn contains(path: ArrayList([4]usize), pos: [4]usize) usize {
+    var i: usize = 0;
+    while (i < path.items.len) {
+        const item = path.items[i];
+        if (item[0] == pos[0] and
+            item[1] == pos[1] and
+            item[2] == pos[2] and
+            item[3] == pos[3]
+        ) {
+            return i;
+        }
+        i += 1;
+    }
+    return std.math.maxInt(usize);
+}
+
 fn part2(input: ArrayList(u8)) usize {
     var i: usize = 0;
 
@@ -88,25 +104,59 @@ fn part2(input: ArrayList(u8)) usize {
     }
 
     var positions = start_nodes;
-    var ret: usize = 0;
-    var endpoint = false;
+    var ret: usize = 1;
 
-    while (!endpoint) {
-        endpoint = true;
-        const instruction = instructions.items[ret % instructions.items.len];
+    for (positions.items) |start_pos| {
+        var step: usize = 0;
+        var curr_pos = start_pos;
+        var path = ArrayList([4]usize).init(allocator);
+        defer path.deinit();
+        var z_pos: usize = 0;
+        while (true) {
+            const instruction = instructions.items[step % instructions.items.len];
 
-        for (0..start_nodes.items.len) |j| {
-            const pos = positions.items[j];
-            const new_pos = connections.get(pos).?[if (instruction) 1 else 0];
-            positions.items[j] = new_pos catch unreachable;
-            // std.debug.print("{s} -> {s} ", .{pos, new_pos});
-            if (new_pos[2] != 'Z') {
-                endpoint = false;
+            const pos_and_instruction = .{
+                step % instructions.items.len,
+                curr_pos[0],
+                curr_pos[1],
+                curr_pos[2]
+            };
+            const cycle_i = contains(path, pos_and_instruction);
+            if (cycle_i != std.math.maxInt(usize)) {
+                // std.debug.print("{s}: Found cycle after {} steps at {s} ({})\n", .{start_pos, step, curr_pos, cycle_i});
+
+                const pre = z_pos;
+                const cycle_len = step - cycle_i;
+
+                // In input, pre == cycle_len
+                if (pre != cycle_len) {
+                    std.debug.panic(":('", .{});
+                }
+
+                ret = (pre * ret) / std.math.gcd(pre, ret);
+
+                // std.debug.print("pre: {}, cycle_len: {}\n", .{pre, cycle_len});
+                break;
             }
-        }
-        std.debug.print(" ({}) \n", .{ret});
+            path.append(pos_and_instruction) catch unreachable;
 
-        ret += 1;
+
+            if (curr_pos[2] == 'Z') {
+                // std.debug.print("{s}: Found Z after {} steps\n", .{start_pos, step});
+                // In input, Z only appears once per cycle
+                if (z_pos == 0) {
+                    z_pos = step;
+                }
+            }
+
+            const new_pos = connections.get(curr_pos).?[if (instruction) 1 else 0];
+            curr_pos = new_pos;
+            if ((step % instructions.items.len) == 0 and std.mem.eql(u8, &curr_pos, &start_pos)) {
+                break;
+            }
+            
+            step += 1;
+        }
     }
 
     // 5000000 --> too low
