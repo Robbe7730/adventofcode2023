@@ -62,7 +62,53 @@ fn part1(input: ArrayList(u8)) isize {
 }
 
 fn part2(input: ArrayList(u8)) isize {
-    _ = input;
     var ret: isize = 0;
+
+    var i: usize = 0;
+
+    while (i < input.items.len) {
+        var line = ArrayList(isize).init(allocator);
+        defer line.deinit();
+        while (input.items[i] != '\n') {
+            skip_spaces(&i, input);
+            
+            const num = read_num_signed(&i, input);
+            line.append(num) catch unreachable;
+        }
+        i += 1;
+
+        var all_zero = false;
+        var firsts = ArrayList(isize).init(allocator);
+        defer firsts.deinit();
+
+        while (!all_zero) {
+            // std.debug.print("{any} \n", .{line.items});
+            all_zero = true;
+            firsts.insert(0, line.items[0]) catch unreachable;
+            var delta_line = ArrayList(isize).init(allocator);
+
+            for (1..line.items.len) |x| {
+                const diff = line.items[x] - line.items[x-1];
+                if (diff != 0) {
+                    all_zero = false;
+                }
+                delta_line.append(diff) catch unreachable;
+            }
+
+            line = delta_line;
+        }
+
+        // std.debug.print("{any} \n", .{firsts.items});
+
+        var curr_val: isize = 0;
+        for (0..firsts.items.len) |x| {
+            curr_val = firsts.items[x] - curr_val;
+            // std.debug.print("{} ", .{curr_val});
+        }
+        // std.debug.print("\n", .{});
+
+        ret += curr_val;
+    }
+
     return ret;
 }
