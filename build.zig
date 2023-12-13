@@ -1,11 +1,11 @@
 const std = @import("std");
 const allocator = std.heap.page_allocator;
 
+const DAYS_IMPLEMENTED = 7;
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
-
-    const DAYS_IMPLEMENTED = 6;
 
     for (0..(DAYS_IMPLEMENTED+1)) |day| {
         var name: []u8 = "";
