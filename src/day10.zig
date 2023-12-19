@@ -227,62 +227,60 @@ fn part2(input: ArrayList(u8)) usize {
         y =  @as(usize, @intCast(@as(isize, @intCast(y)) + dy));
     }
 
-    var queue = ArrayList([2]usize).init(allocator);
-    queue.append(.{0, 0}) catch unreachable;
+    for (0..is_path.items.len) |y1| {
+        path_line = is_path.items[y1];
+        outside_line = is_outside.items[y1];
+        var top_outside = true;
+        var bottom_outside = true;
 
-    while (queue.items.len > 0) {
-        const pos = queue.pop();
-        x = pos[0];
-        y = pos[1];
-        if (!is_outside.items[y].items[x] and !is_path.items[y].items[x]){
-            is_outside.items[y].items[x] = true;
-            if (x >= 1) {
-                queue.append(.{x-1, y}) catch unreachable;
+        for (0..path_line.items.len) |x1| {
+            if (path_line.items[x1]) {
+                const tile = grid.items[y1].items[x1];
 
-                if (y >= 1) {
-                    queue.append(.{x-1, y-1}) catch unreachable;
+                if (tile == 'J' or tile == '|' or tile == 'L'){
+                    top_outside = !top_outside;
                 }
-                if (y < is_outside.items.len-1) {
-                    queue.append(.{x-1, y+1}) catch unreachable;
-                }
-            }
-            if (x < is_outside.items[0].items.len-1) {
-                queue.append(.{x+1, y}) catch unreachable;
 
-                if (y >= 1) {
-                    queue.append(.{x+1, y-1}) catch unreachable;
-                }
-                if (y < is_outside.items.len-1) {
-                    queue.append(.{x+1, y+1}) catch unreachable;
+                if (tile == '7' or tile == '|' or tile == 'F'){
+                    bottom_outside = !bottom_outside;
                 }
             }
-            if (y >= 1) {
-                queue.append(.{x, y-1}) catch unreachable;
-            }
-            if (y < is_outside.items.len-1) {
-                queue.append(.{x, y+1}) catch unreachable;
-            }
+
+            outside_line.items[x1] = (bottom_outside or top_outside);
+
+            // if (bottom_outside and top_outside) {
+            //     std.debug.print("X", .{});
+            // } else if (bottom_outside) {
+            //     std.debug.print("v", .{});
+            // } else if (top_outside) {
+            //     std.debug.print("^", .{});
+            // } else {
+            //     std.debug.print(" ", .{});
+            // }
         }
+        // std.debug.print("\n", .{});
     }
+    // std.debug.print("\n", .{});
 
     for (0..is_path.items.len) |y1| {
         path_line = is_path.items[y1];
         outside_line = is_outside.items[y1];
         for (0..path_line.items.len) |x1| {
             if (path_line.items[x1]) {
-                std.debug.print(".", .{});
+                // std.debug.print(".", .{});
             } else if (outside_line.items[x1]) {
-                std.debug.print("O", .{});
+                // std.debug.print("O", .{});
             } else {
-                std.debug.print("I", .{});
+                // std.debug.print("I", .{});
                 ret += 1;
             }
         }
-        std.debug.print("\n", .{});
+        // std.debug.print("\n", .{});
     }
-    std.debug.print("\n", .{});
+    // std.debug.print("\n", .{});
 
     // 692 --> too high
     // 684 --> too high
+    // 435 :)
     return ret;
 }
