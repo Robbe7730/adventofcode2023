@@ -1,7 +1,7 @@
 const std = @import("std");
 const allocator = std.heap.page_allocator;
 
-const DAYS_IMPLEMENTED = 10;
+const DAYS_IMPLEMENTED = 11;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
