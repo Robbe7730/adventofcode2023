@@ -124,7 +124,62 @@ fn part1(input: ArrayList(u8)) usize {
 }
 
 fn part2(input: ArrayList(u8)) usize {
-    _ = input;
+    var i: usize = 0;
     var ret: usize = 0;
+    var line_num: usize = 0;
+
+    while (i < input.items.len) {
+        line_num += 1;
+        // Read cells
+        var cells = ArrayList(Cell).init(allocator);
+        while (input.items[i] != ' ') {
+            if (input.items[i] == '#') {
+                cells.append(Cell.On) catch unreachable;
+            } else if (input.items[i] == '.') {
+                cells.append(Cell.Off) catch unreachable;
+            } else if (input.items[i] == '?') {
+                cells.append(Cell.Unknown) catch unreachable;
+            } else {
+                unreachable;
+            }
+            i += 1;
+        }
+
+        // Read numbers
+        var numbers = ArrayList(usize).init(allocator);
+        while (input.items[i] != '\n') {
+            // Skip comma
+            i += 1;
+
+            numbers.append(read_num(&i, input)) catch unreachable;
+        }
+
+        // Skip newline
+        i += 1;
+
+        // Expand cells and numbers
+        var new_cells = ArrayList(Cell).init(allocator);
+        var new_numbers= ArrayList(usize).init(allocator);
+        for (0..5) |rep| {
+            for (cells.items) |c| {
+                new_cells.append(c) catch unreachable;
+            }
+
+            for (numbers.items) |n| {
+                new_numbers.append(n) catch unreachable;
+            }
+
+            if (rep != 4) {
+                new_cells.append(Cell.Unknown) catch unreachable;
+            }
+        }
+
+        const num_solutions = calculate_solutions(new_cells, new_numbers);
+
+        std.debug.print("{} ({})\n", .{num_solutions, line_num});
+
+        ret += num_solutions;
+    }
+
     return ret;
 }
