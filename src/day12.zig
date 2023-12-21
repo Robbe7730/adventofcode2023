@@ -8,7 +8,7 @@ pub fn main() void {
     read_and_call(usize, &part1, &part2);
 }
 
-const Cell = enum(usize) {
+const Cell = enum(u8) {
     On,
     Off,
     Unknown
@@ -27,13 +27,21 @@ fn print_cells(cells: ArrayList(Cell)) void {
     std.debug.print("\n", .{});
 }
 
-fn calculate_solutions(cells: ArrayList(Cell), numbers: ArrayList(usize)) usize {
+fn calculate_solutions(
+    cells: ArrayList(Cell),
+    numbers: ArrayList(usize),
+    g_running_count: usize,
+    g_numbers_i: usize,
+    g_unknown_i: usize,
+) usize {
+
     // print_cells(cells);
     // Check if we have a solution
     var is_solution = true;
-    var numbers_i: usize = 0;
-    var running_count: usize = 0;
-    for (cells.items) |cell| {
+    var running_count = g_running_count;
+    var numbers_i = g_numbers_i;
+    var unknown_i: usize = g_unknown_i;
+    for (cells.items[g_unknown_i..]) |cell| {
         // std.debug.print("rc: {}, n_i: {}\n", .{running_count, numbers_i});
         if (cell == Cell.Unknown) {
             is_solution = false;
@@ -52,6 +60,21 @@ fn calculate_solutions(cells: ArrayList(Cell), numbers: ArrayList(usize)) usize 
                 return 0;
             }
         }
+        unknown_i += 1;
+    }
+    
+    if (numbers_i == numbers.items.len) {
+        var has_on = false;
+
+        for (cells.items[unknown_i..]) |cell| {
+            if (cell == Cell.On) {
+                has_on = true;
+                break;
+            }
+        }
+        if (!has_on) {
+            return 1;
+        }
     }
 
     if (is_solution) {
@@ -66,17 +89,12 @@ fn calculate_solutions(cells: ArrayList(Cell), numbers: ArrayList(usize)) usize 
     }
 
     // Find the first Unknown and replace it with On and Off
-    var unknown_i: usize = 0;
-
-    while (cells.items[unknown_i] != Cell.Unknown) {
-        unknown_i += 1;
-    }
 
     var ret: usize = 0;
     cells.items[unknown_i] = Cell.On;
-    ret += calculate_solutions(cells, numbers);
+    ret += calculate_solutions(cells, numbers, running_count, numbers_i, unknown_i);
     cells.items[unknown_i] = Cell.Off;
-    ret += calculate_solutions(cells, numbers);
+    ret += calculate_solutions(cells, numbers, running_count, numbers_i, unknown_i);
     cells.items[unknown_i] = Cell.Unknown;
     return ret;
 }
@@ -113,7 +131,7 @@ fn part1(input: ArrayList(u8)) usize {
         // Skip newline
         i += 1;
 
-        const num_solutions = calculate_solutions(cells, numbers);
+        const num_solutions = calculate_solutions(cells, numbers, 0, 0, 0);
 
         // std.debug.print("{}\n", .{num_solutions});
 
@@ -174,9 +192,10 @@ fn part2(input: ArrayList(u8)) usize {
             }
         }
 
-        const num_solutions = calculate_solutions(new_cells, new_numbers);
+        const start = std.time.milliTimestamp();
+        const num_solutions = calculate_solutions(new_cells, new_numbers, 0, 0, 0);
 
-        std.debug.print("{} ({})\n", .{num_solutions, line_num});
+        std.debug.print("{} ({}) ({} ms)\n", .{num_solutions, line_num, std.time.milliTimestamp() - start});
 
         ret += num_solutions;
     }
