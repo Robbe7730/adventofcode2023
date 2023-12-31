@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) void {
             },
             .target = target,
             .optimize = .ReleaseFast,
-            // .optimize = optimize,
+            //.optimize = optimize,
         });
         b.installArtifact(exe);
     }

@@ -1,6 +1,7 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
 const HashMap = std.HashMap;
+const RwLock = std.Thread.RwLock.DefaultRwLock;
 const allocator = std.heap.page_allocator;
 const read_and_call = @import("shared.zig").read_and_call;
 const read_num = @import("shared.zig").read_num;
@@ -14,6 +15,9 @@ const Cell = enum(u8) {
     Off,
     Unknown
 };
+
+var cache = HashMap(CacheKey, usize, CacheContext, 20).init(allocator);
+var cache_lock = RwLock{};
 
 fn print_cells(cells: ArrayList(Cell)) void {
     for (cells.items) |cell| {
@@ -37,9 +41,9 @@ const CacheKey = struct {
 const CacheContext = struct {
     pub fn hash(self: @This(), key: CacheKey) u64 {
         _ = self;
-        var hasher = std.hash.SipHash64(1, 2).init(&[16]u8{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16});
+        var hasher = std.hash.SipHash64(1, 2).init(&[16]u8{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,});
         
-        for (key.cells[0..32]) |cell| {
+        for (key.cells) |cell| {
             if (cell == Cell.Off) {
                 hasher.update(&[1]u8{0});
             } else if (cell == Cell.On) {
@@ -94,7 +98,7 @@ const CacheContext = struct {
             }
         }
 
-        return false;
+        return true;
     }
 };
 
@@ -104,16 +108,20 @@ fn calculate_solutions(
     g_running_count: usize,
     g_numbers_i: usize,
     g_unknown_i: usize,
-    cache: *HashMap(CacheKey, usize, CacheContext, 80)
 ) usize {
+    var cells_cpy: []Cell = allocator.alloc(Cell, cells.items.len - g_unknown_i) catch unreachable;
+    @memcpy(cells_cpy, cells.items[g_unknown_i..]);
     const key = CacheKey {
-        .cells = cells.items[g_unknown_i..],
+        .cells = cells_cpy,
         .numbers = numbers.items[g_numbers_i..],
         .running_count = g_running_count,
     };
+    cache_lock.lock();
     if (cache.contains(key)) {
+        cache_lock.unlock();
         return cache.get(key).?;
     }
+    cache_lock.unlock();
 
     // print_cells(cells);
     // Check if we have a solution
@@ -128,7 +136,13 @@ fn calculate_solutions(
             break;
         } else if (cell == Cell.Off) {
             if (running_count > 0 and running_count != numbers.items[numbers_i]) {
+                cache_lock.lock();
+                if (cache.contains(key)) {
+                    cache_lock.unlock();
+                    return cache.get(key).?;
+                }
                 cache.put(key, 0) catch unreachable;
+                cache_lock.unlock();
                 return 0;
             }
             if (running_count > 0) {
@@ -138,7 +152,13 @@ fn calculate_solutions(
         } else if (cell == Cell.On) {
             running_count += 1;
             if (numbers_i >= numbers.items.len or running_count > numbers.items[numbers_i]) {
+                cache_lock.lock();
+                if (cache.contains(key)) {
+                    cache_lock.unlock();
+                    return cache.get(key).?;
+                }
                 cache.put(key, 0) catch unreachable;
+                cache_lock.unlock();
                 return 0;
             }
         }
@@ -155,7 +175,13 @@ fn calculate_solutions(
             }
         }
         if (!has_on) {
+            cache_lock.lock();
+            if (cache.contains(key)) {
+                cache_lock.unlock();
+                return cache.get(key).?;
+            }
             cache.put(key, 1) catch unreachable;
+            cache_lock.unlock();
             return 1;
         }
     }
@@ -165,11 +191,24 @@ fn calculate_solutions(
             numbers_i += 1;
         }
         if (numbers_i < numbers.items.len) {
+            cache_lock.lock();
+            if (cache.contains(key)) {
+                cache_lock.unlock();
+                return cache.get(key).?;
+            }
             cache.put(key, 0) catch unreachable;
+            cache_lock.unlock();
             return 0;
         }
         // std.debug.print("Solution \\o/\n", .{});
+
+        cache_lock.lock();
+        if (cache.contains(key)) {
+            cache_lock.unlock();
+            return cache.get(key).?;
+        }
         cache.put(key, 1) catch unreachable;
+        cache_lock.unlock();
         return 1;
     }
 
@@ -177,11 +216,18 @@ fn calculate_solutions(
 
     var ret: usize = 0;
     cells.items[unknown_i] = Cell.On;
-    ret += calculate_solutions(cells, numbers, running_count, numbers_i, unknown_i, cache);
+    ret += calculate_solutions(cells, numbers, running_count, numbers_i, unknown_i);
     cells.items[unknown_i] = Cell.Off;
-    ret += calculate_solutions(cells, numbers, running_count, numbers_i, unknown_i, cache);
+    ret += calculate_solutions(cells, numbers, running_count, numbers_i, unknown_i);
     cells.items[unknown_i] = Cell.Unknown;
+
+    cache_lock.lock();
+    if (cache.contains(key)) {
+        cache_lock.unlock();
+        return cache.get(key).?;
+    }
     cache.put(key, ret) catch unreachable;
+    cache_lock.unlock();
     return ret;
 }
 
@@ -217,8 +263,7 @@ fn part1(input: ArrayList(u8)) usize {
         // Skip newline
         i += 1;
 
-        var cache = HashMap(CacheKey, usize, CacheContext, 80).init(allocator);
-        const num_solutions = calculate_solutions(cells, numbers, 0, 0, 0, &cache);
+        const num_solutions = calculate_solutions(cells, numbers, 0, 0, 0);
 
         // std.debug.print("{}\n", .{num_solutions});
 
@@ -229,13 +274,14 @@ fn part1(input: ArrayList(u8)) usize {
 }
 
 fn thread_fn(cells: ArrayList(Cell), numbers: ArrayList(usize), line_num: usize, ret: *usize) void {
+    _ = line_num;
     const start = std.time.milliTimestamp();
-    var cache = HashMap(CacheKey, usize, CacheContext, 80).init(allocator);
-    const num_solutions = calculate_solutions(cells, numbers, 0, 0, 0, &cache);
+    _ = start;
+    const num_solutions = calculate_solutions(cells, numbers, 0, 0, 0);
 
     _ = @atomicRmw(usize, ret, .Add, num_solutions, std.atomic.Ordering.Monotonic);
 
-    std.debug.print("{} ({}) ({} ms) -> {}\n", .{num_solutions, line_num, std.time.milliTimestamp() - start, ret.*});
+    // std.debug.print("{} ({}) ({} ms) -> {}\n", .{num_solutions, line_num, std.time.milliTimestamp() - start, ret.*});
 }
 
 fn part2(input: ArrayList(u8)) usize {
