@@ -1,7 +1,7 @@
 const std = @import("std");
 const allocator = std.heap.page_allocator;
 
-const DAYS_IMPLEMENTED = 13;
+const DAYS_IMPLEMENTED = 14;
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -33,8 +33,8 @@ pub fn build(b: *std.Build) void {
                 ) catch unreachable
             },
             .target = target,
-            .optimize = .ReleaseFast,
             // .optimize = optimize,
+            .optimize = .ReleaseFast,
         });
         b.installArtifact(exe);
     }
