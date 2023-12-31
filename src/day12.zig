@@ -1,5 +1,6 @@
 const std = @import("std");
 const ArrayList = std.ArrayList;
+const HashMap = std.HashMap;
 const allocator = std.heap.page_allocator;
 const read_and_call = @import("shared.zig").read_and_call;
 const read_num = @import("shared.zig").read_num;
@@ -34,7 +35,6 @@ fn calculate_solutions(
     g_numbers_i: usize,
     g_unknown_i: usize,
 ) usize {
-
     // print_cells(cells);
     // Check if we have a solution
     var is_solution = true;
@@ -141,10 +141,22 @@ fn part1(input: ArrayList(u8)) usize {
     return ret;
 }
 
+fn thread_fn(cells: ArrayList(Cell), numbers: ArrayList(usize), line_num: usize, ret: *usize) void {
+    const start = std.time.milliTimestamp();
+    const num_solutions = calculate_solutions(cells, numbers, 0, 0, 0);
+
+    _ = @atomicRmw(usize, ret, .Add, num_solutions, std.atomic.Ordering.Monotonic);
+
+    std.debug.print("{} ({}) ({} ms) -> {}\n", .{num_solutions, line_num, std.time.milliTimestamp() - start, ret.*});
+}
+
 fn part2(input: ArrayList(u8)) usize {
     var i: usize = 0;
     var ret: usize = 0;
     var line_num: usize = 0;
+
+    var all_cells = ArrayList(ArrayList(Cell)).init(allocator);
+    var all_numbers = ArrayList(ArrayList(usize)).init(allocator);
 
     while (i < input.items.len) {
         line_num += 1;
@@ -192,12 +204,27 @@ fn part2(input: ArrayList(u8)) usize {
             }
         }
 
-        const start = std.time.milliTimestamp();
-        const num_solutions = calculate_solutions(new_cells, new_numbers, 0, 0, 0);
+        all_cells.append(new_cells) catch unreachable;
+        all_numbers.append(new_numbers) catch unreachable;
+    }
 
-        std.debug.print("{} ({}) ({} ms)\n", .{num_solutions, line_num, std.time.milliTimestamp() - start});
+    var threads = ArrayList(std.Thread).init(allocator);
+    for (0..all_cells.items.len) |cells_num| {
+        var thread = std.Thread.spawn(
+            .{},
+            thread_fn,
+            .{
+                all_cells.items[cells_num],
+                all_numbers.items[cells_num],
+                cells_num,
+                &ret
+            }
+        ) catch unreachable;
+        threads.append(thread) catch unreachable;
+    }
 
-        ret += num_solutions;
+    for (threads.items) |t| {
+        t.join();
     }
 
     return ret;
