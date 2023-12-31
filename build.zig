@@ -6,6 +6,7 @@ const DAYS_IMPLEMENTED = 13;
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    _ = optimize;
 
     for (0..(DAYS_IMPLEMENTED+1)) |day| {
         var name: []u8 = "";
@@ -32,8 +33,8 @@ pub fn build(b: *std.Build) void {
                 ) catch unreachable
             },
             .target = target,
-            // .optimize = .ReleaseFast,
-            .optimize = optimize,
+            .optimize = .ReleaseFast,
+            // .optimize = optimize,
         });
         b.installArtifact(exe);
     }
