@@ -28,13 +28,93 @@ fn print_cells(cells: ArrayList(Cell)) void {
     std.debug.print("\n", .{});
 }
 
+const CacheKey = struct {
+    cells: []Cell,
+    numbers: []usize,
+    running_count: usize,
+};
+
+const CacheContext = struct {
+    pub fn hash(self: @This(), key: CacheKey) u64 {
+        _ = self;
+        var hasher = std.hash.SipHash64(1, 2).init(&[16]u8{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16});
+        
+        for (key.cells[0..32]) |cell| {
+            if (cell == Cell.Off) {
+                hasher.update(&[1]u8{0});
+            } else if (cell == Cell.On) {
+                hasher.update(&[1]u8{1});
+            } else {
+                hasher.update(&[1]u8{2});
+            }
+        }
+
+        for (key.numbers) |num| {
+            var byte_arr = [8]u8 {0,0,0,0,0,0,0,0};
+            for (0..8) |i| {
+                byte_arr[i] = @as(u8, @intCast((num >> @intCast(i * 8)) & 0xff));
+            }
+            hasher.update(&byte_arr);
+        }
+
+        var byte_arr = [8]u8 {0,0,0,0,0,0,0,0};
+        for (0..8) |i| {
+            byte_arr[i] = @as(u8, @intCast((key.running_count >> @intCast(i * 8)) & 0xff));
+        }
+        hasher.update(&byte_arr);
+
+        return hasher.finalInt();
+    }
+
+    pub fn eql(self: @This(), left: CacheKey, right: CacheKey) bool {
+        _ = self;
+
+        if (left.running_count != right.running_count) {
+            // This leads to false negatives, but good enough for now
+            return false;
+        }
+
+        if (left.numbers.len != right.numbers.len) {
+            return false;
+        }
+
+        if (left.cells.len != right.cells.len) {
+            return false;
+        }
+
+        for (0..left.numbers.len) |n_i| {
+            if (left.numbers[n_i] != right.numbers[n_i]) {
+                return false;
+            }
+        }
+
+        for (0..left.cells.len) |c_i| {
+            if (left.cells[c_i] != right.cells[c_i]) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+};
+
 fn calculate_solutions(
     cells: ArrayList(Cell),
     numbers: ArrayList(usize),
     g_running_count: usize,
     g_numbers_i: usize,
     g_unknown_i: usize,
+    cache: *HashMap(CacheKey, usize, CacheContext, 80)
 ) usize {
+    const key = CacheKey {
+        .cells = cells.items[g_unknown_i..],
+        .numbers = numbers.items[g_numbers_i..],
+        .running_count = g_running_count,
+    };
+    if (cache.contains(key)) {
+        return cache.get(key).?;
+    }
+
     // print_cells(cells);
     // Check if we have a solution
     var is_solution = true;
@@ -48,6 +128,7 @@ fn calculate_solutions(
             break;
         } else if (cell == Cell.Off) {
             if (running_count > 0 and running_count != numbers.items[numbers_i]) {
+                cache.put(key, 0) catch unreachable;
                 return 0;
             }
             if (running_count > 0) {
@@ -57,6 +138,7 @@ fn calculate_solutions(
         } else if (cell == Cell.On) {
             running_count += 1;
             if (numbers_i >= numbers.items.len or running_count > numbers.items[numbers_i]) {
+                cache.put(key, 0) catch unreachable;
                 return 0;
             }
         }
@@ -73,6 +155,7 @@ fn calculate_solutions(
             }
         }
         if (!has_on) {
+            cache.put(key, 1) catch unreachable;
             return 1;
         }
     }
@@ -82,9 +165,11 @@ fn calculate_solutions(
             numbers_i += 1;
         }
         if (numbers_i < numbers.items.len) {
+            cache.put(key, 0) catch unreachable;
             return 0;
         }
         // std.debug.print("Solution \\o/\n", .{});
+        cache.put(key, 1) catch unreachable;
         return 1;
     }
 
@@ -92,10 +177,11 @@ fn calculate_solutions(
 
     var ret: usize = 0;
     cells.items[unknown_i] = Cell.On;
-    ret += calculate_solutions(cells, numbers, running_count, numbers_i, unknown_i);
+    ret += calculate_solutions(cells, numbers, running_count, numbers_i, unknown_i, cache);
     cells.items[unknown_i] = Cell.Off;
-    ret += calculate_solutions(cells, numbers, running_count, numbers_i, unknown_i);
+    ret += calculate_solutions(cells, numbers, running_count, numbers_i, unknown_i, cache);
     cells.items[unknown_i] = Cell.Unknown;
+    cache.put(key, ret) catch unreachable;
     return ret;
 }
 
@@ -131,7 +217,8 @@ fn part1(input: ArrayList(u8)) usize {
         // Skip newline
         i += 1;
 
-        const num_solutions = calculate_solutions(cells, numbers, 0, 0, 0);
+        var cache = HashMap(CacheKey, usize, CacheContext, 80).init(allocator);
+        const num_solutions = calculate_solutions(cells, numbers, 0, 0, 0, &cache);
 
         // std.debug.print("{}\n", .{num_solutions});
 
@@ -143,7 +230,8 @@ fn part1(input: ArrayList(u8)) usize {
 
 fn thread_fn(cells: ArrayList(Cell), numbers: ArrayList(usize), line_num: usize, ret: *usize) void {
     const start = std.time.milliTimestamp();
-    const num_solutions = calculate_solutions(cells, numbers, 0, 0, 0);
+    var cache = HashMap(CacheKey, usize, CacheContext, 80).init(allocator);
+    const num_solutions = calculate_solutions(cells, numbers, 0, 0, 0, &cache);
 
     _ = @atomicRmw(usize, ret, .Add, num_solutions, std.atomic.Ordering.Monotonic);
 
